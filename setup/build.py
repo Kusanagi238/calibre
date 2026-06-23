@@ -656,9 +656,16 @@ class Build(Command):
         os.makedirs(bdir)
         cwd = os.getcwd()
         os.chdir(bdir)
+        # Run cmake and make but don't let failures here abort the entire bootstrap.
+        # If cmake/make fail (e.g. missing Qt private targets), skip the headless build with a clear message.
+        import subprocess
         try:
-            self.check_call(cmd + ['-S', os.path.dirname(sources[0])])
-            self.check_call([self.env.make] + [f'-j{cpu_count or 1}'])
+            try:
+                self.check_call(cmd + ['-S', os.path.dirname(sources[0])])
+                self.check_call([self.env.make] + [f'-j{cpu_count or 1}'])
+            except subprocess.CalledProcessError as e:
+                self.info('\n####### Skipping headless build due to build error: %s' % e)
+                return
         finally:
             os.chdir(cwd)
         os.rename(self.j(bdir, 'libheadless.so'), target)

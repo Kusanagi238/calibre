@@ -80,10 +80,18 @@ class TestFetchBackend(unittest.TestCase):
 
     def setUp(self):
         self.server_started = Event()
+        # Prepare a place to capture server start failures
+        self.server_start_error = None
         self.server_thread = Thread(target=self.run_server, daemon=True)
         self.server_thread.start()
         if not self.server_started.wait(15):
+            # If the server thread set an error, raise it for better diagnostics
+            if getattr(self, 'server_start_error', None):
+                raise self.server_start_error
             raise Exception('Test server failed to start')
+        # If the server signaled start but encountered an error, surface it
+        if getattr(self, 'server_start_error', None):
+            raise self.server_start_error
         self.request_count = 0
         self.dont_send_response = self.dont_send_body = False
 
@@ -182,11 +190,26 @@ class TestFetchBackend(unittest.TestCase):
             ans = Handler(self, *a)
             return ans
 
-        with ThreadingHTTPServer(('', 0), create_handler) as httpd:
-            self.server = httpd
-            self.port = httpd.server_address[1]
-            self.server_started.set()
-            httpd.serve_forever()
+        try:
+            with ThreadingHTTPServer(('', 0), create_handler) as httpd:
+                self.server = httpd
+                self.port = httpd.server_address[1]
+                # Signal that the server has started successfully
+                self.server_started.set()
+                httpd.serve_forever()
+        except Exception as e:
+            # Store the exception so setUp can re-raise or report it
+            try:
+                self.server_start_error = e
+            except Exception:
+                # Defensive: shouldn't normally fail, but avoid masking original error
+                pass
+            # Ensure the waiting thread is released so tests do not hang
+            try:
+                self.server_started.set()
+            except Exception:
+                pass
+            return
 
 
 def find_tests():

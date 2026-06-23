@@ -128,4 +128,17 @@ def main(args=sys.argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except subprocess.CalledProcessError as e:
+        prints('Error: external command failed during execution:', getattr(e, 'cmd', '<unknown>'), 'exit code', getattr(e, 'returncode', None))
+        if getattr(e, 'output', None):
+            prints('Output:')
+            prints(e.output)
+        sys.exit(1)
+    except subprocess.SubprocessError as e:
+        prints('Subprocess error:', e)
+        sys.exit(1)
+    except Exception as e:
+        prints('Unexpected error:', e)
+        sys.exit(1)

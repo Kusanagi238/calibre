@@ -229,7 +229,18 @@ class Command:
 
         st = time.time()
         self.running(cmd)
-        cmd.run(opts)
+        try:
+            cmd.run(opts)
+        except subprocess.CalledProcessError as e:
+            # Propagate the subprocess return code as exit status
+            sys.exit(e.returncode)
+        except Exception as e:
+            # Log a clearer message and exit with non-zero status
+            try:
+                self.warn('Command failed: %s' % e)
+            except Exception:
+                pass
+            sys.exit(1)
         self.info(f'* {command_names[cmd]} took {time.time() - st:.1f} seconds')
         if is_ci:
             self.info('::endgroup::')
