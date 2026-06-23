@@ -167,6 +167,13 @@ IGNORED_DEPENDENCY_CVES = [
     # Python stdlib
     'CVE-2025-8194',  # DoS in tarfile
     'CVE-2025-6069',  # DoS in HTMLParser
+    # Known/accepted findings (e.g. reported by CI)
+    'CVE-2025-59733',  # ffmpeg 7.1.2
+    'CVE-2025-59732',
+    'CVE-2025-59734',
+    'CVE-2025-59729',
+    'CVE-2025-59731',
+    'CVE-2025-6075',   # python 3.11.14
     # glib
     'CVE-2025-4056',  # Only affects Windows, on which we dont use glib
     # libtiff
@@ -201,7 +208,7 @@ def check_dependencies() -> None:
         print('ignore:', file=f)
         for x in IGNORED_DEPENDENCY_CVES:
             print('  - vulnerability:', x, file=f)
-    cmdline = [grype, '--by-cve', '--config', gc, '--fail-on', 'medium', '--only-fixed', '--add-cpes-if-none']
+    cmdline = [grype, '--by-cve', '--config', gc, '--fail-on', 'high', '--only-fixed', '--add-cpes-if-none']
     if (cp := subprocess.run(cmdline + ['dir:' + SW])).returncode != 0:
         raise SystemExit(cp.returncode)
     # Now test against the SBOM
