@@ -182,11 +182,22 @@ class TestFetchBackend(unittest.TestCase):
             ans = Handler(self, *a)
             return ans
 
-        with ThreadingHTTPServer(('', 0), create_handler) as httpd:
-            self.server = httpd
-            self.port = httpd.server_address[1]
-            self.server_started.set()
-            httpd.serve_forever()
+        try:
+            with ThreadingHTTPServer(('', 0), create_handler) as httpd:
+                self.server = httpd
+                self.port = httpd.server_address[1]
+                self.server_started.set()
+                httpd.serve_forever()
+        except Exception as e:
+            # Ensure the test thread does not hang waiting for server_started
+            try:
+                self.server = None
+                self.server_start_exception = e
+                self.server_started.set()
+            except Exception:
+                pass
+            # Re-raise so the original error is visible to CI logs
+            raise
 
 
 def find_tests():

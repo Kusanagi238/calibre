@@ -113,7 +113,15 @@ def main(args=sys.argv):
             getattr(commands, cmd).clean()
         return 0
 
-    command.run_all(opts)
+    try:
+        import subprocess
+        command.run_all(opts)
+    except subprocess.CalledProcessError as e:
+        prints('Command failed:', e)
+        return getattr(e, 'returncode', 1)
+    except Exception as e:
+        prints('Error running command:', e)
+        return 1
 
     warnings = get_warnings()
     if warnings:

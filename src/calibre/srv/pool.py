@@ -39,6 +39,13 @@ class Worker(Thread):
                 self.working = False
             try:
                 self.notify_server()
+            except (ValueError, OSError) as e:
+                # Socket/server likely closed; ignore notify to avoid "write to closed file" errors
+                try:
+                    self.log.debug('ServerWorker failed to notify server on job completion (server closed): %s', e)
+                except Exception:
+                    # Logging should never raise; swallow any unexpected errors here
+                    pass
             except Exception:
                 self.log.exception('ServerWorker failed to notify server on job completion')
 
@@ -63,11 +70,9 @@ class ThreadPool:
         return self.result_queue.get_nowait()
 
     def stop(self, wait_till):
-        for w in self.workers:
-            try:
-                self.request_queue.put_nowait(None)
-            except Full:
-                break
+        # Ensure each worker receives a sentinel; block if the queue is full until space is available
+        for _ in self.workers:
+            self.request_queue.put(None)
         for w in self.workers:
             now = monotonic()
             if now >= wait_till:

@@ -657,7 +657,13 @@ class Build(Command):
         cwd = os.getcwd()
         os.chdir(bdir)
         try:
-            self.check_call(cmd + ['-S', os.path.dirname(sources[0])])
+            try:
+                # Run cmake and capture/print diagnostic output (check_call will provide details on failure).
+                self.check_call(cmd + ['-S', os.path.dirname(sources[0])])
+            except (subprocess.CalledProcessError, SystemExit) as e:
+                # If CMake failed, check_call already printed stdout/stderr. Provide a helpful hint.
+                print('CMake configuration failed. Please ensure CMake and the required Qt/development packages are installed.', file=sys.stderr)
+                raise
             self.check_call([self.env.make] + [f'-j{cpu_count or 1}'])
         finally:
             os.chdir(cwd)

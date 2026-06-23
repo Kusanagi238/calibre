@@ -455,8 +455,8 @@ class ServerLoop:
             r, w = os.pipe()
             os.set_blocking(r, False)
             os.set_blocking(w, True)
-            self.control_in =  open(w, 'wb')
-            self.control_out = open(r, 'rb')
+            self.control_in = open(r, 'rb')
+            self.control_out = open(w, 'wb')
 
     def close_control_connection(self):
         with suppress(Exception):
@@ -616,7 +616,7 @@ class ServerLoop:
             self.close(s, conn)
 
         for x, conn in close_needed:
-            self.close(s, conn)
+            self.close(x, conn)
 
         if readable:
             writable = []
@@ -683,10 +683,20 @@ class ServerLoop:
 
     def write_to_control(self, what):
         if iswindows:
-            self.control_in.sendall(what)
+            try:
+                if self.control_in is not None:
+                    self.control_in.sendall(what)
+            except (OSError, ValueError):
+                # Control socket closed or unavailable; ignore
+                return
         else:
-            self.control_in.write(what)
-            self.control_in.flush()
+            try:
+                if self.control_in is not None:
+                    self.control_in.write(what)
+                    self.control_in.flush()
+            except (ValueError, OSError):
+                # Control pipe closed; ignore
+                return
 
     def wakeup(self):
         self.write_to_control(WAKEUP)
