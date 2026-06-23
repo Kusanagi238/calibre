@@ -113,7 +113,11 @@ def main(args=sys.argv):
             getattr(commands, cmd).clean()
         return 0
 
-    command.run_all(opts)
+    try:
+        command.run_all(opts)
+    except subprocess.CalledProcessError as e:
+        prints('Subprocess error during command execution:', e)
+        return 1
 
     warnings = get_warnings()
     if warnings:
@@ -128,4 +132,9 @@ def main(args=sys.argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        rc = main()
+    except subprocess.CalledProcessError as e:
+        prints('CMake/subprocess failed:', e)
+        rc = 1
+    sys.exit(rc)

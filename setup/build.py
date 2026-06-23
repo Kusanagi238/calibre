@@ -431,7 +431,15 @@ class Build(Command):
         if islinux and opts.cross_compile_extensions == 'windows':
             self.compiling_for = 'windows'
             if not os.path.exists('.build-cache/xwin/root'):
-                subprocess.check_call([sys.executable, 'setup.py', 'xwin'])
+                cmd = [sys.executable, 'setup.py', 'xwin']
+                try:
+                    subprocess.check_call(cmd)
+                except subprocess.CalledProcessError as e:
+                    print(f"ERROR: cross-compile setup 'xwin' failed while running {cmd}: {e}", file=sys.stderr)
+                    raise SystemExit(1)
+                except OSError as e:
+                    print(f"ERROR: failed to execute {cmd}: {e}", file=sys.stderr)
+                    raise SystemExit(1)
         self.env = init_env(debug=opts.debug)
         self.windows_cross_env = init_env(debug=opts.debug, compiling_for='windows')
         all_extensions = tuple(map(partial(parse_extension, compiling_for=self.compiling_for), read_extensions()))
